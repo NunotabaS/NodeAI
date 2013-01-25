@@ -15,7 +15,7 @@ function dumpFile(file, contenttype, response){
 		response.writeHead(404, {"Content-Type": "text/html"});
 		response.end("<html><head><title>404 File Not Found</title></head><body>"
 			+ "<h2>404 - File Not Found</h2><p>File was not found on the server!"
-			+ " Please check your URL.</p><hr><p><small>Powered by NodeAI ("
+			+ " Please check your URL.</p><hr><p><small>Powered by NodeAI HTTP ("
 			+ NODEAI_VERSION
 			+")</small></p></body></html>");
 		return;
@@ -31,7 +31,7 @@ function dumpFile(file, contenttype, response){
 		}
 		if(contenttype == "text/html"){
 			for(dx in PROD_CONSTANTS){
-				data = data.replace("{$" + dx + "$}", PROD_CONSTANTS[dx]);
+				data = data.replace("{$" + dx + "}", PROD_CONSTANTS[dx]);
 			}
 		}
 		response.writeHead(200, {"Content-Type": contenttype});
@@ -72,6 +72,8 @@ http.createServer(function (request, response) {
 				response.end(JSON.stringify({"code":501, "msg":"Invalid Message."}));
 				return;
 			}
+			if(post.uid != null)
+				ai.setenv("uid", post.uid);
 			resp = ai.speak(post.msg);
 			response.writeHead(200, {'Content-Type': 'application/json'});
 			response.end(JSON.stringify(resp));

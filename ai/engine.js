@@ -21,7 +21,7 @@ function setenv(key, value){
 
 function speak(dialog){
 	
-	return formMessage("Sorry, I dont understand.");
+	return formMessage("Sorry, I dont understand." + dialog);
 }
 
 /** Module Interfaces **/

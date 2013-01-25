@@ -16,7 +16,8 @@ var _ = function(type,init,inner){
 		elem.appendChild(inner);
 	return elem;
 }
-
+/*** Global Stuff ***/
+var USER_ID = "";
 function sendRequest(msg){
 	var xhr = new XMLHttpRequest();
 	xhr.onreadystatechange = function(){
@@ -28,10 +29,13 @@ function sendRequest(msg){
 				return;
 			}
 			$("chattext").appendChild(_("div",{},_("textnode",{},ret.msg)));
+			if(ret.uid != null)
+				USER_ID = ret.uid;
 		}
 	};
 	xhr.open("POST","/",true);
-	xhr.send("msg=" + msg);
+	xhr.send("msg=" + encodeURIComponent(msg) 
+			+ (USER_ID != "" ? "&uid=" + encodeURIComponent(USER_ID) : ""));
 	$("chattext").appendChild(_("div",{className:"chat-me"},_("textnode",{},"Me: " + msg)));
 };
 

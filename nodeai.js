@@ -10,6 +10,16 @@ var PROD_CONSTANTS = {
 	"BOT_NAME":"Suwasuna"
 };
 
+var args = process.argv.splice(2);
+if(args != null && args.length >0){
+	try{
+		PORT = parseInt(args[0]);
+	}catch(e){
+		console.log("[Error] Port Invalid, Reverting to 894");
+		PORT = 894;
+	}
+}
+
 function dumpFile(file, contenttype, response){
 	var generate404 = function (){
 		response.writeHead(404, {"Content-Type": "text/html"});
@@ -40,9 +50,21 @@ function dumpFile(file, contenttype, response){
 	});
 }
 
+function callAI(params, request, response){
+	var resp = {};
+	if(params.uid != null)
+		ai.setenv("uid", params.uid);
+	if(params.msg != null){
+		resp = ai.speak(params.msg);
+	}else{
+		resp = {"code":500, "msg":"Error. You didn't provide a message."};
+	}
+	response.writeHead(200, {'Content-Type': 'application/json'});
+	response.end(JSON.stringify(resp));
+}
+
 http.createServer(function (request, response) {
 	var req = url.parse(request.url, true);
-	var resp = {};
 	if(req.pathname != null && req.pathname.substring(0,10) == "/interface"){
 		var fileName = req.pathname.substring(11);
 		switch(fileName){
@@ -72,23 +94,11 @@ http.createServer(function (request, response) {
 				response.end(JSON.stringify({"code":501, "msg":"Invalid Message."}));
 				return;
 			}
-			if(post.uid != null)
-				ai.setenv("uid", post.uid);
-			resp = ai.speak(post.msg);
-			response.writeHead(200, {'Content-Type': 'application/json'});
-			response.end(JSON.stringify(resp));
+			callAI(post, request, response);
 		});
 		return;
 	}
-	if(req.query.msg != null){
-		if(req.query.uid != null)
-			ai.setenv("uid",req.query.uid);
-		resp = ai.speak(req.query.msg);
-	}else{
-		resp = {"code":500, "msg":"Error. You didn't provide a message."};
-	}
-	response.writeHead(200, {'Content-Type': 'application/json'});
-	response.end(JSON.stringify(resp));
+	callAI(req.query, request, response);
 }).listen(PORT);
 
-console.log('NodeAI has been started on server 127.0.0.1:' + PORT);
+console.log('[LOG] NodeAI has been started on server 127.0.0.1:' + PORT);

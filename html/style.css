@@ -1,0 +1,43 @@
+body{
+	font-family: Helvetica, Arial, "Microsoft Yahei", sans-serif;
+	font-size: 16px;
+	background:#293134;
+	color:#93C763;
+}
+p{
+	color:#E0E2E4;
+}
+h1{
+	font-family:Consolas, Courier, monospace;
+	margin:0;
+}
+input:focus,select:focus,textarea:focus,button:focus {outline: none;}
+input[type="text"]{
+	color:#EC7600;
+	border:none;
+	border-bottom:1px solid #EC7600;
+	background:#293134;
+	font-size:20px;
+	font-family:Consolas, Courier, monospace;
+}
+
+#chatarea{
+	position:absolute;
+	top:50px;bottom:50px;left:0;right:0;
+	background:#555;
+	overflow:hidden;
+}
+#chattext{
+	position:absolute;
+	font-family:Consolas, Courier, monospace;
+	font-size:18px;
+	bottom:5px;left:10px;right:10px;
+}
+.chat-me{
+	color:#EC7600;
+}
+.chatbox-input{
+	position:absolute;
+	bottom:12px;left:10px;right:30px;
+	height:30px;
+}

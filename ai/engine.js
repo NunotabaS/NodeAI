@@ -20,6 +20,7 @@ function setenv(key, value){
 }
 
 function speak(dialog){
+	
 	return formMessage("Sorry, I dont understand.");
 }
 

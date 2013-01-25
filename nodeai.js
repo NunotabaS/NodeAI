@@ -1,13 +1,13 @@
 var http = require('http');
-var url = require("url");
-var qs = require("querystring");
-var fs = require("fs");
+var url = require('url');
+var qs = require('querystring');
+var fs = require('fs');
 var ai = require('./ai/engine.js');
 
 var PORT = 894;
 var NODEAI_VERSION = "Version 0.1";
 var PROD_CONSTANTS = {
-	"BOT_NAME":"Suwasuna"
+	"BOT_NAME":"asuna"
 };
 
 var args = process.argv.splice(2);
@@ -20,6 +20,8 @@ if(args != null && args.length >0){
 	}
 }
 
+ai.setenv("botid","asuna");
+
 function dumpFile(file, contenttype, response){
 	var generate404 = function (){
 		response.writeHead(404, {"Content-Type": "text/html"});
@@ -29,11 +31,9 @@ function dumpFile(file, contenttype, response){
 			+ NODEAI_VERSION
 			+")</small></p></body></html>");
 		return;
-	}
-	if(file == null){
-		generate404();
-		return;
-	}
+	};
+	if(file == null)
+		return generate404();
 	fs.readFile(file, "utf8", function(err,data){
 		if(err){
 			generate404();
@@ -54,13 +54,22 @@ function callAI(params, request, response){
 	var resp = {};
 	if(params.uid != null)
 		ai.setenv("uid", params.uid);
+	
+	ai.listen(function(resp){
+		response.writeHead(200, {'Content-Type': 'application/json'});
+		response.end(JSON.stringify(resp));
+	});
+	
 	if(params.msg != null){
-		resp = ai.speak(params.msg);
+		ai.speak(params.msg);
 	}else{
-		resp = {"code":500, "msg":"Error. You didn't provide a message."};
+		response.writeHead(200, {'Content-Type': 'application/json'});
+		response.end(JSON.stringify({
+			"code":500, 
+			"msg":"Error. You didn't provide a message."
+		}));
 	}
-	response.writeHead(200, {'Content-Type': 'application/json'});
-	response.end(JSON.stringify(resp));
+	
 }
 
 http.createServer(function (request, response) {
@@ -101,4 +110,4 @@ http.createServer(function (request, response) {
 	callAI(req.query, request, response);
 }).listen(PORT);
 
-console.log('[LOG] NodeAI has been started on server 127.0.0.1:' + PORT);
+console.log('[Log] NodeAI has been started on server 127.0.0.1:' + PORT);

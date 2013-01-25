@@ -1,0 +1,5 @@
+{
+	"dbNotInitialized":"Sorry, the AI database hasn't been initialized yet",
+	"cannotRespond":"Sorry, I don't understand that.",
+	"overloaded":"Oh dear! The server is overloaded!"
+}

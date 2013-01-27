@@ -31,6 +31,10 @@ function sendRequest(msg){
 			$("chattext").appendChild(_("div",{},_("textnode",{},ret.msg)));
 			if(ret.uid != null)
 				USER_ID = ret.uid;
+			if(ret.code == 206){
+				/** Partial **/
+				sendRequest("");
+			}
 		}
 	};
 	xhr.open("POST","/",true);
@@ -43,9 +47,37 @@ window.addEventListener("load",function(){
 	$("chatinput").addEventListener("keydown",function(e){
 		if(e.keyCode == 13){
 			if(this.value != ""){
-				sendRequest(this.value);
+				if(this.value.charAt(0) == ":"){
+					switch(this.value){
+						case ":help":
+							var d = _("div",{style:{color:"#fff"}});
+							d.appendChild(_("textnode",{},"Client::Help"));
+							d.appendChild(_("br",{}));
+							d.appendChild(_("textnode",{},":clear - Clears the chatbox"));
+							$("chattext").appendChild(d);
+							break;
+						case ":clear":
+							var c = $("chattext");
+							while(c.children.length > 0)
+								c.removeChild(c.children[0]);
+							break;
+						default:
+							$("chattext").appendChild(
+								_("div",{style:{color:"#fff"}},_("textnode",{},
+									"\"" + this.value.substring(1) + "\" : Bad Command")));
+							break;
+					}
+				}else{
+					sendRequest(this.value);
+				}
 				this.value = "";
 			}
+		}else{
+			if(this.value.charAt(0) == ":")
+				this.style.color = "#f22";
+			else
+				this.style.color = "";
 		}
 	});
+	$("chatinput").focus();
 });

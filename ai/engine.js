@@ -9,20 +9,35 @@ var env = {
 /** Classes **/
 function Sentence(text){
 	var children = [];
+	var ongoing = 0; var isDone = false;
+	var end = null;
 	this.text = text;
 	this.context = {};
+	this.done = function(){
+		isDone = true;
+	};
+	this.addEventListener = function(e, l){
+		if(e == "end"){
+			end = l;
+		}
+	};
+	this.addQuery = function(){ ongoing++;   };
+	this.finishQuery = function(){
+		ongoing --;
+		if(isDone && ongoing <= 0 && end != null)
+			end();
+	};
 	this.amend = function (params){
 		for(x in params){
-			if(this.params[x] == null){
-				this.params[x] = params[x];
+			if(this.context[x] == null){
+				this.context[x] = params[x];
 				break;
 			}
 			switch(typeof params[x]){
-				case "string":
-					this.params[x] = params[x];break;
 				case "number":
-					this.params[x] += params[x];break;
-				default:break;
+					this.context[x] += params[x];break;
+				default:
+					this.context[x] = params[x];break;
 			}
 		}
 	};
@@ -41,7 +56,7 @@ function Sentence(text){
 				case "word":{
 					var matcher = new RegExp(rule.matcher, "g");
 					if(matcher.test(this.text)){
-						this.amend(r.set);
+						this.amend(rule.set);
 						this.text = this.text.replace(matcher, rule.part);
 					}
 				}break;
@@ -51,8 +66,16 @@ function Sentence(text){
 						var nm = new RegExp(rule.filter, "g");
 						var matn = nm.exec(this.text);
 						for(var x = 0; x < rule.fields.length; x++){
-							this.addChild(parse(new Sentence(matn[x+1]), rule.fields[x]));
+							var sn = new Sentence(matn[x+1]);
+							var slf = this;
+							slf.addQuery();
+							sn.addEventListener("end",function(){
+								slf.finishQuery();
+							});
+							this.addChild(sn);
+							parse(sn, rule.fields[x]);
 						}
+						this.amend(rule.set);
 					}
 				}
 			}
@@ -94,13 +117,39 @@ function parse(sentence, expect){
 	if(expect == null){
 		/** Parsing a Global Large Sentence **/
 		var stream = mongodb.collection("rules").find({type:"logic"}).stream();
+		sentence.addQuery();
 		stream.on("data", function(item) {
 			sentence.matchRule(item);
 		});
 		stream.on("end", function() {
-			listener(formMessage(sentence.toString()));
+			sentence.done();
+			sentence.finishQuery();
 		});
 	}else{
+		switch(expect){
+			case "$noun$":
+			case "$verb$":
+			case "$adjective$":
+			case "$particle$":
+				var stream = mongodb.collection("rules").find({type:"synonym"}).stream();
+				sentence.addQuery();
+				stream.on("data",function(record){
+					sentence.matchRule(record);
+				});
+				stream.on("end",function(){
+					stream = mongodb.collection("rules").find({type:"word"}).stream();
+					stream.on("data",function(record){
+						sentence.matchRule(record);
+					});
+					stream.on("end",function(){
+						sentence.done();
+						sentence.finishQuery();
+					});
+				});
+			case "compound":
+			case "sentence":
+			break;
+		}
 		return sentence;
 	}
 }
@@ -132,7 +181,11 @@ function onHandleError(errorCode){
 
 function speak(dialog){
 	if(mongodb == null) return onHandleError("dbNotInitialized");
-	parse(new Sentence(dialog));
+	var s = new Sentence(dialog);
+	s.addEventListener("end",function(){
+		listener(formMessage(s.toString()));
+	});
+	parse(s);
 	//return onHandleError("cannotRespond");
 }
 

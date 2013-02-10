@@ -28,19 +28,25 @@ function sendRequest(msg){
 				console.log("Communication Error - Return format invalid");
 				return;
 			}
-			$("chattext").appendChild(_("div",{},_("textnode",{},ret.msg)));
+			$("chattext").appendChild(_("div",{},
+							_("textnode",{},(bot_name != null ? bot_name + ": " : "") + ret.msg)
+						));
 			if(ret.uid != null)
 				USER_ID = ret.uid;
 			if(ret.code == 206){
 				/** Partial **/
-				sendRequest("");
+				setTimeout(function(){
+					sendRequest("");
+				},500);
 			}
 		}
 	};
 	xhr.open("POST","/",true);
 	xhr.send("msg=" + encodeURIComponent(msg) 
 			+ (USER_ID != "" ? "&uid=" + encodeURIComponent(USER_ID) : ""));
-	$("chattext").appendChild(_("div",{className:"chat-me"},_("textnode",{},"Me: " + msg)));
+	if(msg.length > 0){
+		$("chattext").appendChild(_("div",{className:"chat-me"},_("textnode",{},"Me: " + msg)));
+	}
 };
 
 window.addEventListener("load",function(){

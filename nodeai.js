@@ -41,7 +41,7 @@ function dumpFile(file, contenttype, response){
 		}
 		if(contenttype == "text/html"){
 			for(dx in PROD_CONSTANTS){
-				data = data.replace("{$" + dx + "}", PROD_CONSTANTS[dx]);
+				data = data.replace(new RegExp("\\{\\$" + dx + "\\}","g"), PROD_CONSTANTS[dx]);
 			}
 		}
 		response.writeHead(200, {"Content-Type": contenttype});
@@ -54,7 +54,8 @@ function callAI(params, request, response){
 	var resp = {};
 	if(params.uid != null)
 		ai.setenv("uid", params.uid);
-	
+	else
+		ai.setenv("uid", null);
 	ai.listen(function(resp){
 		response.writeHead(200, {'Content-Type': 'application/json'});
 		response.end(JSON.stringify(resp));

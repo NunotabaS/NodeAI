@@ -6,94 +6,10 @@ var env = {
 	"dbname":"nodeai",
 	"happiness":100
 };
-/** Classes **/
-function Sentence(text){
-	var children = [];
-	var ongoing = 0; var isDone = false;
-	var end = null;
-	this.text = text;
-	this.context = {};
-	this.done = function(){
-		isDone = true;
-	};
-	this.addEventListener = function(e, l){
-		if(e == "end"){
-			end = l;
-		}
-	};
-	this.addQuery = function(){ ongoing++;   };
-	this.finishQuery = function(){
-		ongoing --;
-		if(isDone && ongoing <= 0 && end != null)
-			end();
-	};
-	this.amend = function (params){
-		for(x in params){
-			if(this.context[x] == null){
-				this.context[x] = params[x];
-				break;
-			}
-			switch(typeof params[x]){
-				case "number":
-					this.context[x] += params[x];break;
-				default:
-					this.context[x] = params[x];break;
-			}
-		}
-	};
-	this.addChild = function (childSentence){
-		children.push(childSentence);
-	};
-	this.getChildren = function(){
-		return children;
-	};
-	this.matchRule = function(rule){
-		try{
-			switch(rule.type){
-				case "synonym":{
-					this.text = this.text.replace(new RegExp(rule.matcher,"g"),rule.sameword);
-				}break;
-				case "word":{
-					var matcher = new RegExp(rule.matcher, "g");
-					if(matcher.test(this.text)){
-						this.amend(rule.set);
-						this.text = this.text.replace(matcher, rule.part);
-					}
-				}break;
-				case "logic":{
-					var matcher = new RegExp(rule.matcher, "g");
-					if(matcher.test(this.text)){
-						var nm = new RegExp(rule.filter, "g");
-						var matn = nm.exec(this.text);
-						for(var x = 0; x < rule.fields.length; x++){
-							var sn = new Sentence(matn[x+1]);
-							var slf = this;
-							slf.addQuery();
-							sn.addEventListener("end",function(){
-								slf.finishQuery();
-							});
-							this.addChild(sn);
-							parse(sn, rule.fields[x]);
-						}
-						this.amend(rule.set);
-					}
-				}
-			}
-		}catch(e){
-			console.log(e);
-			console.log("[Error] Illegal rule! Dumping:");
-			console.log(rule);
-		}
-	};
-	this.toString = function (){
-		var dump = this.text + "\n" + JSON.stringify(this.context) + "\n";
-		for(var x = 0; x < children.length; x++){
-			dump += "Child: " + children[x].toString();
-		}
-		return dump;
-	};
-}
-
+/** Active Sessions **/
+var sesn = {
+	"next":0,
+};
 
 function dbConnect(){
 	mongoClient.connect("mongodb://localhost:27017/" + env['dbname'], function(err, db) {
@@ -104,54 +20,23 @@ function dbConnect(){
 	});
 }
 
-function formMessage(message, code){
+function formMessage(message, code, xobj){
 	if(code == null)
 		code = 200;
-	return {
+	var r = {
 		"code":code,
 		"msg":message
 	};
+	if(xobj != null)
+		for(n in xobj)
+			r[n] = xobj[n];
+	return r;
 }
 
-function parse(sentence, expect){
-	if(expect == null){
-		/** Parsing a Global Large Sentence **/
-		var stream = mongodb.collection("rules").find({type:"logic"}).stream();
-		sentence.addQuery();
-		stream.on("data", function(item) {
-			sentence.matchRule(item);
-		});
-		stream.on("end", function() {
-			sentence.done();
-			sentence.finishQuery();
-		});
-	}else{
-		switch(expect){
-			case "$noun$":
-			case "$verb$":
-			case "$adjective$":
-			case "$particle$":
-				var stream = mongodb.collection("rules").find({type:"synonym"}).stream();
-				sentence.addQuery();
-				stream.on("data",function(record){
-					sentence.matchRule(record);
-				});
-				stream.on("end",function(){
-					stream = mongodb.collection("rules").find({type:"word"}).stream();
-					stream.on("data",function(record){
-						sentence.matchRule(record);
-					});
-					stream.on("end",function(){
-						sentence.done();
-						sentence.finishQuery();
-					});
-				});
-			case "compound":
-			case "sentence":
-			break;
-		}
-		return sentence;
-	}
+function openSession(){
+	var id = ++sesn.next;
+	sesn[id] = {};
+	return id;
 }
 
 function setenv(key, value){
@@ -179,14 +64,58 @@ function onHandleError(errorCode){
 	});
 }
 
-function speak(dialog){
-	if(mongodb == null) return onHandleError("dbNotInitialized");
-	var s = new Sentence(dialog);
-	s.addEventListener("end",function(){
-		listener(formMessage(s.toString()));
+function onMessage(messageCode, messageBase){
+	fs.readFile("messages/messages." + (env["botid"] != null ? env["botid"] : "predef") + ".json"
+				, "utf8"
+				, function(err,data){
+		if(err) return listener(formMessage("[" + messageCode + "] : Undefined"));
+		try{
+			var MSG = JSON.parse(data);
+			if(MSG[messageCode] != null){
+				if(messageBase["code"] == 206){
+					sesn[messageBase["uid"]]["next"] = MSG["_" + messageCode];
+				}
+				return listener(formMessage(MSG[messageCode], 200 , messageBase));
+			}else
+				return listener(formMessage("[" + messageCode + "] : Undefined"));
+		}catch(e){
+			console.log("[Error] Response Parse Error");
+			listener(formMessage("[" + messageCode + "] : ParseError"));
+		}
+		return;
 	});
-	parse(s);
-	//return onHandleError("cannotRespond");
+}
+
+function speak(dialog){
+	//if(mongodb == null) return onHandleError("dbNotInitialized");
+	if(env["uid"] == null){
+		if(dialog.substring(0,6) == "/teach"){
+			var sessionId = openSession();
+			sesn[sessionId]["mode"] = "teach";
+			return onMessage("enterTeachMode", {
+				uid: sessionId,
+				code:206
+			} );
+		}
+	} else {
+		if(sesn[env["uid"]] == null){
+			env["uid"] = null;
+			speak(dialog);
+			return;
+		}
+		if(sesn[env["uid"]]["next"] != null){
+			var resp = sesn[env["uid"]]["next"];
+			sesn[env["uid"]]["next"] = null;
+			return listener(formMessage(resp));
+		}
+		switch(sesn[env["uid"]]["mode"]){
+			case "teach":{
+				
+			}break;
+			default:break;
+		}
+	}
+	return onHandleError("cannotRespond");
 }
 
 function listen(l){

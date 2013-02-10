@@ -1,4 +1,7 @@
 {
 	"enterTeachMode":"Entered teaching mode!"，
-	"_enterTeachMode":"Speak a sentence to me then tell me how to respond."
+	"_enterTeachMode":"Speak a sentence to me then tell me how to respond.",
+	"enterLearnMode":"What should I answer with?",
+	"finishLearnMode":"Got it.",
+	"_finishLearnMode":"Another sentence, please?"
 }

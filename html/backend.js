@@ -57,15 +57,28 @@ window.addEventListener("load",function(){
 					switch(this.value){
 						case ":help":
 							var d = _("div",{style:{color:"#fff"}});
+							d.appendChild(_("br",{}));
 							d.appendChild(_("textnode",{},"Client::Help"));
 							d.appendChild(_("br",{}));
+							d.appendChild(_("textnode",{},"======================="));
+							d.appendChild(_("br",{}));
 							d.appendChild(_("textnode",{},":clear - Clears the chatbox"));
+							d.appendChild(_("br",{}));
+							d.appendChild(_("textnode",{},":unsession - Deletes the session key"));
+							d.appendChild(_("br",{}));
+							d.appendChild(_("br",{}));
 							$("chattext").appendChild(d);
 							break;
 						case ":clear":
 							var c = $("chattext");
 							while(c.children.length > 0)
 								c.removeChild(c.children[0]);
+							break;
+						case ":unsession":
+							USER_ID = "";
+							$("chattext").appendChild(
+								_("div",{style:{color:"#fff"}},_("textnode",{},
+									"Session key cleared.")));
 							break;
 						default:
 							$("chattext").appendChild(

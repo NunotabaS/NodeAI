@@ -34,7 +34,7 @@ function formMessage(message, code, xobj){
 }
 
 function openSession(){
-	var id = ++sesn.next;
+	var id = ++sesn.next + "";
 	sesn[id] = {};
 	return id;
 }
@@ -72,14 +72,16 @@ function onMessage(messageCode, messageBase){
 		try{
 			var MSG = JSON.parse(data);
 			if(MSG[messageCode] != null){
-				if(messageBase["code"] == 206){
-					sesn[messageBase["uid"]]["next"] = MSG["_" + messageCode];
+				if(messageBase != null && messageBase["code"] == 206){
+					var uid = messageBase["uid"] != null ? messageBase["uid"] : env["uid"];
+					sesn[uid]["next"] = MSG["_" + messageCode];
 				}
 				return listener(formMessage(MSG[messageCode], 200 , messageBase));
 			}else
 				return listener(formMessage("[" + messageCode + "] : Undefined"));
 		}catch(e){
 			console.log("[Error] Response Parse Error");
+			console.log(e);
 			listener(formMessage("[" + messageCode + "] : ParseError"));
 		}
 		return;
@@ -110,8 +112,15 @@ function speak(dialog){
 		}
 		switch(sesn[env["uid"]]["mode"]){
 			case "teach":{
-				
+				sesn[env["uid"]]["mode"] = "learn";
+				return onMessage("enterLearnMode");
 			}break;
+			case "learn":{
+				sesn[env["uid"]]["mode"] = "teach";
+				return onMessage("finishLearnMode",{
+					code:206
+				});
+			}
 			default:break;
 		}
 	}

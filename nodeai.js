@@ -7,7 +7,7 @@ var ai = require('./ai/engine.js');
 var PORT = 894;
 var NODEAI_VERSION = "Version 0.1";
 var PROD_CONSTANTS = {
-	"BOT_NAME":"asuna"
+	"BOT_NAME":"Asuna"
 };
 
 var args = process.argv.splice(2);
